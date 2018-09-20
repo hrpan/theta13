@@ -9,9 +9,20 @@ const double dist_map[8][6] = {
 	{1923.15, 1897.51, 1540.67, 1540.87, 1559.72, 1533.18},
 };
 
+const double reactor_power[6] = {
+	2.514, 2.447, 2.566, 2.519, 2.519, 2.550
+};
+
+const bool normal_order = true;
 
 const double sin2_theta12[2] = {0.307, 0.013};
 const double delta_m2_21[2] = {7.53e-5, 0.18e-5}; 
 const double delta_m2_32[2] = {2.43e-3, 0.07e-3}; 
 
+const size_t reactor_nuclears = 3;
 
+const char *reactor_data[reactor_nuclears] = {
+	"./data/Pu239.dat",
+	"./data/Pu241.dat",
+	"./data/U235.dat"
+};
