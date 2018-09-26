@@ -26,3 +26,5 @@ const char *reactor_data[reactor_nuclears] = {
 	"./data/Pu241.dat",
 	"./data/U235.dat"
 };
+
+const double det_eff[3] = {0.806, 0.0193, 0.0013};
