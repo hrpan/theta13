@@ -8,11 +8,13 @@ bool draw_contour = false;
 
 
 const double osc_par_inits[4][3] = {
-	{0.1, 0, 0.2},
-	{0.307, 0, 1.0},
+	{9.00e-2, 0, 0.2},
+	{3.07e-1, 0, 1.0},
 	{7.53e-5, 0, 0},
-	{2.43e-3, 0, 0},
+	{2.43e-3, 0, 0}
 };
+
+const size_t npars = 24;
 
 const double minuit_print = 1;
 const double minuit_strategy = 2;
@@ -32,6 +34,8 @@ ROOT::Math::Interpolator *r_spec[reactor_nuclears];
 ROOT::Math::Interpolator *cross_section;
 
 double _cross_section[energy_bins];
+
+double _weighted_reactor_power[8][6];
 
 double ibd_rate[8][2], bkg_rate[8][2], obs_rate[8][2];
 
@@ -97,11 +101,16 @@ void parseParameters(
 	_norm = par[par_idx++];
 
 }
-	
 
-void chi2(int &npar, double *g, double &result, double *par, int flag){
-	int par_idx = 0;
-	//osc. pars
+void chi2_wrap(int &npar, double *g, double &result, double *par, int flag){
+
+	result = chi2(par, false);
+			
+	printf("chi2: %20.10f\r", result);
+	fflush(stdout);
+}
+
+double chi2(double *par, bool print){
 	double _sin2_2theta13;
 	double _sin2_theta12;
 	double _sin_theta12;
@@ -130,19 +139,39 @@ void chi2(int &npar, double *g, double &result, double *par, int flag){
 
 
 	double _chi2_stats = chi2_stats(
-		_sin2_2theta13, _sin_theta12, _delta_m2_21,
-		_delta_m2_ee, _reactor_shape, _cross_section,
-		energy_bins, _det_eff_uncorr, _det_eff_corr,
-		_bkg_uncorr, _norm, obs_rate, debug);
+		_sin2_2theta13, 
+		_sin_theta12, 
+		_delta_m2_21,
+		_delta_m2_ee, 
+		_reactor_shape, 
+		_weighted_reactor_power, 
+		_cross_section, 
+		energy_bins, 
+		_det_eff_uncorr, 
+		_det_eff_corr,
+		_bkg_uncorr, 
+		_norm, 
+		obs_rate, 
+		debug, 
+		print);
 
 	double _chi2_syst = chi2_syst(
-		_sin2_theta12, _delta_m2_21, _delta_m2_32,
-		_det_eff_uncorr, _det_eff_corr, _bkg_uncorr);
+		_sin2_theta12, 
+		_delta_m2_21, 
+		_delta_m2_32,
+		_det_eff_uncorr, 
+		_det_eff_corr, 
+		_bkg_uncorr, 
+		print);
+
+	if(print){
+		printf("chi2_stats: %10.5f chi2_syst: %10.5f chi2_sum: %10.5f\n", _chi2_stats, _chi2_syst, _chi2_stats + _chi2_syst);
+		fflush(stdout);
+	}
 	
-	printf("chi2_stats: %10.5f chi2_syst: %10.5f chi2_sum: %10.5f\r", _chi2_stats, _chi2_syst, _chi2_stats + _chi2_syst);
-	fflush(stdout);
-	result = _chi2_stats + _chi2_syst;
+	return _chi2_stats + _chi2_syst;
 }
+
 
 void fit(){
 	parseInput(ibd_rate, bkg_rate, obs_rate);		
@@ -155,10 +184,20 @@ void fit(){
 	for(size_t r = 0; r < reactor_nuclears; ++r)
 		parseReactorSpectrum(reactor_data[r], r_spec[r]);
 
-	TFitter minuit(22 + reactor_nuclears - 1);
+	for(size_t det = 0; det < 8; ++det){
+		for(size_t core = 0; core < 6; ++core){
+			if(det == 3 || det == 7)
+				_weighted_reactor_power[det][core] = reactor_power_8ad[core];
+			else
+				_weighted_reactor_power[det][core] = lt_6ad * reactor_power_6ad[core] + (1- lt_6ad) * reactor_power_8ad[core]; 
+		}
+	}
+
+
+	TFitter minuit(npars);
 	minuit.ExecuteCommand("SET PRINTOUT", &minuit_print, 1);
 	minuit.ExecuteCommand("SET STRATEGY", &minuit_strategy, 1);
-	minuit.SetFCN(chi2);
+	minuit.SetFCN(chi2_wrap);
 
 	int idx = 0;
 	char buf[255];
@@ -181,7 +220,7 @@ void fit(){
 		sprintf(buf, "BKG_UNCORR%d", p);
 		minuit.SetParameter(idx++, buf, bkg_rate[p][0], bkg_rate[p][1], 0, 0);
 	}
-	minuit.SetParameter(idx++, "NORM", 1e5, 1e3, 0, 0);
+	minuit.SetParameter(idx++, "NORM", 4e5, 1e3, 0, 0);
 	if(!debug){
 		minuit.ExecuteCommand("SIMPLEX", simplex_args, 2);
 		//minuit.ExecuteCommand("SEEK", seek_args, 2);
@@ -195,4 +234,8 @@ void fit(){
 		g->Draw();
 		c1->SaveAs("test.png");
 	}
+	double pars[npars];
+	for(size_t n=0;n<npars;++n)
+		pars[n] = minuit.GetParameter(n);
+	chi2(pars, true);
 }
