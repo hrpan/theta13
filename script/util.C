@@ -34,4 +34,33 @@ double survival_prob(double sin_theta12, double sin2_2theta13, double d_21, doub
 	return 1 - _cos4_theta13 * _sin2_2theta12 * _sin2_delta_21 - sin2_2theta13 * _sin2_delta_ee;
 }
 
+TGraph *minuit_profile(TFitter &minuit, int par_no, int npoints, double ndevs){
+	cout << "STARTING TO PROFILE PARAMETER" << par_no << endl;
+	gMinuit->SetPrintLevel(-1);
 
+	double _p0 = minuit.GetParameter(par_no);
+	double _p0_dev = minuit.GetParError(par_no);	
+	
+	double amin, edm, errdef;
+	int nvpar, nparx;
+	minuit.GetStats(amin, edm, errdef, nvpar, nparx);
+
+	double chi2_min = amin;
+
+	minuit.FixParameter(par_no);
+	vector<double> x, y;
+	double scan_step = scan_dev / scan_pts;
+	for(int pt = - (npoints - 1); pt < npoints; ++pt){
+		cout << "\nSCANNING PAR" << par_no << " AT " << pt * scan_step << "DEV" << endl;
+		double _tmp[2] = {par_no + 1, _p0 + _p0_dev * scan_step * pt};
+		minuit.ExecuteCommand("SET PARAMETER", _tmp, 2);
+		minuit.ExecuteCommand("MINIMIZE", 0, 0);
+		minuit.GetStats(amin, edm, errdef, nvpar, nparx);
+		x.push_back(_tmp[1]);
+		y.push_back(amin - chi2_min);
+	}
+	minuit.ReleaseParameter(par_no);	
+
+	TGraph *g = new TGraph(x.size(), &x[0], &y[0]);
+	return g;
+}
