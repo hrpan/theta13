@@ -8,7 +8,7 @@ bool draw_contour = false;
 
 
 const double osc_par_inits[4][3] = {
-	{9.00e-2, 0, 0.2},
+	{8.60e-2, 0, 0.2},
 	{3.07e-1, 0, 1.0},
 	{7.53e-5, 0, 0},
 	{2.43e-3, 0, 0}
@@ -16,8 +16,11 @@ const double osc_par_inits[4][3] = {
 
 const size_t npars = 24;
 
+const int scan_pts = 30;
+const double scan_dev = 5;
+
 const double minuit_print = 1;
-const double minuit_strategy = 2;
+const double minuit_strategy = 1;
 
 const double simplex_args[2] = {1e5, 0.01};
 const double seek_args[2] = {1e4, 1.0};
@@ -209,8 +212,8 @@ void fit(){
 		sprintf(buf, "REACTOR_SHAPE%d", p);
 		minuit.SetParameter(idx++, buf, 1, 0.1, 0, 100);
 	}
-	//minuit.FixParameter(4);
-	//minuit.FixParameter(5);
+	minuit.FixParameter(4);
+	minuit.FixParameter(5);
 	for(int p=0;p<8;++p){
 		sprintf(buf, "DET_EFF_UNCORR%d", p);
 		minuit.SetParameter(idx++, buf, 0, 1e-4, 0, 0);
@@ -220,9 +223,9 @@ void fit(){
 		sprintf(buf, "BKG_UNCORR%d", p);
 		minuit.SetParameter(idx++, buf, bkg_rate[p][0], bkg_rate[p][1], 0, 0);
 	}
-	minuit.SetParameter(idx++, "NORM", 4e5, 1e3, 0, 0);
+	minuit.SetParameter(idx++, "NORM", 2.22e5, 1e3, 0, 0);
 	if(!debug){
-		minuit.ExecuteCommand("SIMPLEX", simplex_args, 2);
+		//minuit.ExecuteCommand("SIMPLEX", simplex_args, 2);
 		//minuit.ExecuteCommand("SEEK", seek_args, 2);
 		minuit.ExecuteCommand("MINIMIZE", minimize_args, 2);
 	}else{
@@ -234,8 +237,31 @@ void fit(){
 		g->Draw();
 		c1->SaveAs("test.png");
 	}
-	double pars[npars];
-	for(size_t n=0;n<npars;++n)
-		pars[n] = minuit.GetParameter(n);
-	chi2(pars, true);
+	double pars[npars][2];
+	for(size_t n=0;n<npars;++n){
+		pars[n][0] = minuit.GetParameter(n);
+		pars[n][1] = minuit.GetParError(n);
+	}
+
+	TGraph *g = minuit_profile(minuit, 0, scan_pts, scan_dev);
+	g->SetMinimum(0);
+	g->Draw();
+
+	for(int dev=1; dev < 5; ++dev){
+		int line_style = 9;
+		double _c = pars[0][0];
+		double _d = dev * pars[0][1];
+		double _dev2 = dev * dev;
+		TLine *_x1 = new TLine(_c - _d, 0, _c - _d, _dev2);
+		_x1->SetLineStyle(line_style);
+		TLine *_x2 = new TLine(_c + _d, 0, _c + _d, _dev2);
+		_x2->SetLineStyle(line_style);
+		TLine *_y1 = new TLine(_c - _d, _dev2, _c + _d, _dev2);
+		_y1->SetLineStyle(line_style);
+		_x1->Draw("same");
+		_x2->Draw("same");
+		_y1->Draw("same");	
+	}
+
+	c1->SaveAs("profile.png");
 }
