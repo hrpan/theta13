@@ -22,13 +22,15 @@ void parseInput(double ibd_rate[8][2], double bkg_rate[8][2], double obs_rate[8]
 		double _tmp = _lt[i] * _eps_mu[i] * _eps_mult[i];
 		obs_rate[i][0] = _nus[i]/ _tmp;
 		obs_rate[i][1] = sqrt(_nus[i]) / _tmp;
-		cout << obs_rate[i][0] << " " << obs_rate[i][1] << " ";
+		cout << obs_rate[i][0] << " " << obs_rate[i][1] << endl;
 	}
 	for(int i=0;i<8;++i) cin >> ibd_rate[i][0] >> ibd_rate[i][1];
 }
 
 void parseCrossSection(ROOT::Math::Interpolator &*f, double &e_min, double &e_max){
-	ifstream ifile("./data/cross_section");
+	char *cross_section_data = "./data/cross_section";
+	cout << "PARSING CROSS SECTION: " << cross_section_data << endl;
+	ifstream ifile(cross_section_data);
 	double _e, _cs;
 	vector<double> x, y;
 	while( ifile >> _e >> _cs ){
@@ -41,6 +43,7 @@ void parseCrossSection(ROOT::Math::Interpolator &*f, double &e_min, double &e_ma
 }
 
 void parseReactorSpectrum(const char *data, ROOT::Math::Interpolator &*f){
+	cout << "PARSING REACTOR SPECTRUM: " << data << endl;
 	ifstream ifile(data);
 	string str;
 	vector<double> x, y;
