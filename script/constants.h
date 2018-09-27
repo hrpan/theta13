@@ -1,4 +1,7 @@
-const double dist_map[8][6] = {
+const size_t n_det = 8;
+const size_t n_core = 6;
+
+const double dist_map[n_det][n_core] = {
 	{362.38, 371.76, 903.47, 817.16, 1353.62, 1265.32},
 	{357.94, 368.41, 903.35, 816.90, 1354.23, 1265.89},
 	{1332.48, 1358.15, 467.57, 489.58, 557.58, 499.21},
@@ -9,9 +12,15 @@ const double dist_map[8][6] = {
 	{1923.15, 1897.51, 1540.67, 1540.87, 1559.72, 1533.18},
 };
 
-const double reactor_power[6] = {
+const double reactor_power_6ad[n_core] = {
+	2.082, 2.874, 2.516, 2.554, 2.825, 1.976
+};
+
+const double reactor_power_8ad[n_core] = {
 	2.514, 2.447, 2.566, 2.519, 2.519, 2.550
 };
+
+const double lt_6ad = 0.1704238;
 
 const bool normal_order = true;
 
